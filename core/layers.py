@@ -32,7 +32,10 @@ class Linear:
         self.cache = None
 
     def forward(self, X):
-        """ Z = X @ W + b """
+        """ 
+        前向传播
+        Z = X @ W + b 
+        """
         # 保存 X 用于反向传播
         self.cache = X
         return X @ self.W + self.b
