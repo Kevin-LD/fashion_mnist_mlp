@@ -1,6 +1,7 @@
 import os
 import struct
 import numpy as np
+from download import download_fashion_mnist
 
 def load_mnist(path, kind='train'):
     """
@@ -24,6 +25,18 @@ def prepare_data(data_dir, val_ratio=0.1):
     """
     加载数据并划分训练集与验证集
     """
+    # 如果数据不存在则自动下载
+    required_files = [
+        'train-images-idx3-ubyte',
+        'train-labels-idx1-ubyte',
+        't10k-images-idx3-ubyte',
+        't10k-labels-idx1-ubyte'
+    ]
+
+    if not all(os.path.exists(os.path.join(data_dir, f)) for f in required_files):
+        print("Dataset not found. Start downloading...")
+        download_fashion_mnist(data_dir)
+
     # 加载训练集和测试集
     X_train_full, y_train_full = load_mnist(data_dir, kind='train')
     X_test, y_test = load_mnist(data_dir, kind='t10k')
