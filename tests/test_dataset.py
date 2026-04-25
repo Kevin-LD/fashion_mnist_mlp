@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # 将根目录加入路径
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from dataset import prepare_data, DataLoader
+from datasets.dataset import prepare_data, DataLoader
 
 def test_dataset_loading():
     print("正在加载数据并进行初步检查...")

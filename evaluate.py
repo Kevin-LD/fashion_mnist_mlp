@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # 确保导入项目模块
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-from dataset import prepare_data, DataLoader
+from datasets.dataset import prepare_data, DataLoader
 from models.mlp import ThreeLayerMLP
 
 def calculate_confusion_matrix(y_true, y_pred, num_classes=10):

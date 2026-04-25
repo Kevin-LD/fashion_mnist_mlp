@@ -1,7 +1,7 @@
 import os
 import struct
 import numpy as np
-from download import download_fashion_mnist
+from datasets.download import download_fashion_mnist
 
 def load_mnist(path, kind='train'):
     """

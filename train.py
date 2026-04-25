@@ -8,7 +8,7 @@ from tqdm import tqdm
 # 确保能正确导入当前项目的模块
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-from dataset import prepare_data, DataLoader
+from datasets.dataset import prepare_data, DataLoader
 from models.mlp import ThreeLayerMLP
 from core.loss import CrossEntropyLoss
 from core.optimizer import SGD
