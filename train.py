@@ -82,27 +82,49 @@ def train(args):
         print(f"正在从断点恢复模型: {args.resume}")
         model.load_weights(args.resume)
         
+        resume_dir = os.path.dirname(args.resume)
         meta_path = args.resume.replace('.pkl', '_meta.json')
+        history_path = os.path.join(resume_dir, 'history.json')
+        
+        # 4.1 加载模型元数据
         if os.path.exists(meta_path):
             with open(meta_path, 'r') as f:
                 meta = json.load(f)
                 start_epoch = meta.get('epoch', 0)
-                history = meta.get('history', history)
                 old_batch_size = meta.get('batch_size', args.batch_size)
                 
                 if old_batch_size != args.batch_size:
                     print(f"[*] 检测到 batch_size 改变 ({old_batch_size} -> {args.batch_size})，正在自适应调整调度器步数...")
                 
-                # 无论旧的 last_step 是多少，因为模型只在 epoch 结束时保存，
-                # 所以我们直接根据已完成的 start_epoch 和当前的 batch_size 计算全新的等效 last_step
                 if args.scheduler == 'step':
                     last_step_meta = start_epoch - 1
                 else:
                     last_step_meta = (start_epoch * total_iters_per_epoch) - 1
                     
-            print(f"元数据已加载: 从 Epoch {start_epoch} 开始续训。")
+            print(f"元数据已加载: 模型权重来自 Epoch {start_epoch}。")
         else:
             print("警告: 未找到元数据文件 (_meta.json)。将使用默认调度器状态。")
+
+        # 4.2 加载并截断历史记录 (对齐到 start_epoch)
+        if not args.no_save_history and os.path.exists(history_path):
+            with open(history_path, 'r') as f:
+                loaded_history = json.load(f)
+                
+            print(f"正在同步历史记录... (截断超出 Epoch {start_epoch} 的冗余数据)")
+            
+            # 截断 epoch 级别的记录
+            for key in loaded_history['epoch']:
+                if key in history['epoch']:
+                    history['epoch'][key] = loaded_history['epoch'][key][:start_epoch]
+                    
+            # 截断 iter 级别的记录
+            old_iters_per_epoch = len(train_loader.X) // old_batch_size + (1 if len(train_loader.X) % old_batch_size != 0 else 0)
+            target_iters = start_epoch * old_iters_per_epoch
+            for key in loaded_history['iter']:
+                if key in history['iter']:
+                    history['iter'][key] = loaded_history['iter'][key][:target_iters]
+        elif not args.no_save_history:
+            print("警告: 未找到 history.json 文件，将重新初始化历史记录记录。")
 
     # 检查训练进度是否已满
     if start_epoch >= args.epochs:
@@ -111,7 +133,6 @@ def train(args):
         return
 
     # 5. 初始化优化器、调度器
-    
     optimizer = SGD(model.get_trainable_layers(), lr=args.lr, momentum=args.momentum)
     
     if args.scheduler == 'constant':
@@ -130,7 +151,7 @@ def train(args):
     best_model_path = os.path.join(args.save_dir, 'best_model.pkl')
     best_val_acc = max(history['epoch']['val_acc']) if history['epoch']['val_acc'] else 0.0
 
-# 7. 开始训练循环
+    # 7. 开始训练循环
     for epoch in range(start_epoch, args.epochs):
         epoch_loss_sum = 0.0
         
@@ -176,8 +197,7 @@ def train(args):
             meta = {
                 'epoch': epoch + 1,
                 'last_step': scheduler.last_step,
-                'batch_size': args.batch_size, 
-                'history': history,
+                'batch_size': args.batch_size,
                 'config': {
                     'hidden1': args.hidden1,
                     'hidden2': args.hidden2,
@@ -195,9 +215,10 @@ def train(args):
               f"Train Loss: {avg_train_loss:.4f} | "
               f"Val Acc: {val_acc*100:.2f}% {best_flag}")
 
-        # 保存历史
-        with open(os.path.join(args.save_dir, 'history.json'), 'w') as f:
-            json.dump(history, f)
+        # 统一在此处保存全局的历史记录
+        if not args.no_save_history:
+            with open(os.path.join(args.save_dir, 'history.json'), 'w') as f:
+                json.dump(history, f)
 
     print("\n训练完成 (Training Complete).")
     return best_val_acc, history
@@ -231,6 +252,10 @@ if __name__ == '__main__':
                         choices=['constant', 'step', 'linear', 'cosine'], help='学习率衰减策略')
     parser.add_argument('--step_size', type=int, default=10, help='StepLR 的步长 (每隔多少个 epoch 衰减一次)')
     parser.add_argument('--gamma', type=float, default=0.1, help='StepLR 的学习率衰减率')
+    
+    # 日志与保存控制
+    parser.add_argument('--no_save_history', action='store_true', default=False, 
+                        help='不保存训练历史记录 (history.json 及相关元数据)')
     
     args = parser.parse_args()
     train(args)
