@@ -1,8 +1,11 @@
-### Python ###
+# Python
 __pycache__/
 
-### Data & Heavy Binaries ###
+# Data
 data/
 
-### OS & IDE ###
+# IDE
 .vscode/
+
+# Weights & Training histroy
+run/
