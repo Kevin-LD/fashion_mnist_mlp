@@ -4,8 +4,11 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 
-def smooth_curve(points, factor=0.8):
-    """用于平滑 iteration 级别的 loss 曲线"""
+def smooth_curve(points, factor=0.95):
+    """
+    用于平滑 iteration 级别的 loss 曲线。
+    factor 越大 (接近1)，平滑力度越大。
+    """
     smoothed_points = []
     for point in points:
         if smoothed_points:
@@ -28,6 +31,7 @@ def plot_history(exp_dir):
 
     # 提取数据
     epoch_train_loss = history['epoch']['train_loss']
+    epoch_train_data_loss = history['epoch']['train_data_loss'] # 提取未加正则化的 data loss
     epoch_val_loss = history['epoch']['val_loss']
     epoch_val_acc = history['epoch']['val_acc']
     
@@ -41,10 +45,10 @@ def plot_history(exp_dir):
     fig, axs = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle('Training History Visualization', fontsize=16)
 
-    # --- 图 1: Epoch 级别的 Loss (Train vs Val) ---
-    axs[0, 0].plot(epochs, epoch_train_loss, 'b-', label='Train Loss', marker='o', markersize=4)
+    # --- 图 1: Epoch 级别的 Data Loss vs Val Loss ---
+    axs[0, 0].plot(epochs, epoch_train_data_loss, 'b-', label='Train Data Loss', marker='o', markersize=4)
     axs[0, 0].plot(epochs, epoch_val_loss, 'r-', label='Val Loss', marker='s', markersize=4)
-    axs[0, 0].set_title('Epoch Loss')
+    axs[0, 0].set_title('Epoch Train Data Loss vs Validation Loss')
     axs[0, 0].set_xlabel('Epoch')
     axs[0, 0].set_ylabel('Loss')
     axs[0, 0].legend()
@@ -58,24 +62,42 @@ def plot_history(exp_dir):
     axs[0, 1].legend()
     axs[0, 1].grid(True, linestyle='--', alpha=0.7)
 
-    # --- 图 3: Iteration 级别的 Train Loss ---
-    # 由于 iter loss 通常震荡较大，画一条平滑曲线帮助观察趋势
-    axs[1, 0].plot(iters, iter_train_loss, color='lightblue', alpha=0.5, label='Iter Loss')
-    axs[1, 0].plot(iters, smooth_curve(iter_train_loss, factor=0.85), color='blue', label='Smoothed Loss')
-    axs[1, 0].set_title('Iteration Training Loss')
-    axs[1, 0].set_xlabel('Iteration')
-    axs[1, 0].set_ylabel('Loss')
+    # --- 图 3: Epoch 级别的 Total Loss ---
+    axs[1, 0].plot(epochs, epoch_train_loss, 'purple', label='Train Total Loss', marker='d', markersize=4)
+    axs[1, 0].set_title('Epoch Total Loss (Data + Regularization)')
+    axs[1, 0].set_xlabel('Epoch')
+    axs[1, 0].set_ylabel('Total Loss')
     axs[1, 0].legend()
     axs[1, 0].grid(True, linestyle='--', alpha=0.7)
 
-    # --- 图 4: 学习率 (Learning Rate) 变化 ---
-    # 使用 iter 级别的 LR 以捕捉 warmup 或 step 变化
-    axs[1, 1].plot(iters, iter_lr, 'm-', label='Learning Rate')
-    axs[1, 1].set_title('Learning Rate Schedule')
+    # --- 图 4: Iteration 级别的 Train Loss 与 LR 叠加显示 (双 Y 轴) ---
+    color_loss = 'tab:blue'
+    axs[1, 1].set_title('Iteration Loss & Learning Rate Schedule')
     axs[1, 1].set_xlabel('Iteration')
-    axs[1, 1].set_ylabel('Learning Rate')
-    # 如果 LR 变化很大，可以考虑使用对数坐标： axs[1, 1].set_yscale('log')
+    axs[1, 1].set_ylabel('Loss', color=color_loss)
+    
+    # 画 Loss
+    l1 = axs[1, 1].plot(iters, iter_train_loss, color='lightblue', alpha=0.3, label='Iter Loss (Raw)')
+    l2 = axs[1, 1].plot(iters, smooth_curve(iter_train_loss, factor=0.95), color=color_loss, label='Iter Loss (Smoothed)')
+    axs[1, 1].tick_params(axis='y', labelcolor=color_loss)
     axs[1, 1].grid(True, linestyle='--', alpha=0.7)
+
+    # 实例化第二个 Y 轴，共享同一个 X 轴
+    ax2 = axs[1, 1].twinx()
+    color_lr = 'tab:red'
+    ax2.set_ylabel('Learning Rate', color=color_lr)
+    
+    # 画 LR
+    l3 = ax2.plot(iters, iter_lr, color=color_lr, linestyle='-', linewidth=2, label='Learning Rate')
+    ax2.tick_params(axis='y', labelcolor=color_lr)
+    
+    # 如果 LR 变化超过几个数量级，可以取消下一行的注释使用对数坐标
+    # ax2.set_yscale('log')
+
+    # 合并双 Y 轴的图例
+    lines = l1 + l2 + l3
+    labels = [l.get_label() for l in lines]
+    ax2.legend(lines, labels, loc='upper right')
 
     plt.tight_layout()
     fig.subplots_adjust(top=0.9) # 给主标题留出空间

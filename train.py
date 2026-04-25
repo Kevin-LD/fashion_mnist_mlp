@@ -69,8 +69,8 @@ def train(args):
     last_step_meta = -1 # 默认从头开始
     
     history = {
-        'epoch': {'train_loss': [], 'val_loss': [], 'val_acc': [], 'lr': []},
-        'iter': {'train_loss': [], 'lr': []}
+        'epoch': {'train_loss': [], 'train_data_loss': [], 'val_loss': [], 'val_acc': [], 'lr': []},
+        'iter': {'train_loss': [], 'train_data_loss': [], 'lr': []}
     }
 
     # 计算当前 batch_size 下的总 iter 步数
@@ -154,6 +154,7 @@ def train(args):
     # 7. 开始训练循环
     for epoch in range(start_epoch, args.epochs):
         epoch_loss_sum = 0.0
+        epoch_data_loss_sum = 0.0
         
         pbar = tqdm(train_loader, total=total_iters_per_epoch, leave=False)
         pbar.set_description(f"Epoch [{epoch+1:03d}/{args.epochs:03d}]")
@@ -171,8 +172,10 @@ def train(args):
             
             # 记录数据
             history['iter']['train_loss'].append(float(loss))
+            history['iter']['train_data_loss'].append(float(data_loss))
             history['iter']['lr'].append(float(optimizer.lr))
             epoch_loss_sum += loss * X_batch.shape[0]
+            epoch_data_loss_sum += data_loss * X_batch.shape[0]
             
             if args.scheduler in ['linear', 'cosine']:
                 scheduler.step()
@@ -184,9 +187,11 @@ def train(args):
             
         # Epoch 级评估
         avg_train_loss = epoch_loss_sum / len(train_loader.X)
+        avg_train_data_loss = epoch_data_loss_sum / len(train_loader.X)
         val_loss, val_acc = evaluate(model, val_loader, criterion)
         
         history['epoch']['train_loss'].append(float(avg_train_loss))
+        history['epoch']['train_data_loss'].append(float(avg_train_data_loss))
         history['epoch']['val_loss'].append(float(val_loss))
         history['epoch']['val_acc'].append(float(val_acc))
         history['epoch']['lr'].append(float(optimizer.lr))
