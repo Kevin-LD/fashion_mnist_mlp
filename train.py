@@ -37,7 +37,7 @@ def evaluate(model, data_loader, criterion):
 def train(args):
     print("="*60)
     print(f"实验配置:")
-    print(f"学习率: {args.lr} | 调度器: {args.scheduler}")
+    print(f"学习率: {args.lr} | 权重衰减: {args.weight_decay} | 调度器: {args.scheduler}")
     print(f"批次大小: 训练集 {args.batch_size}, 验证集 {args.val_batch_size}")
     print(f"隐藏层维度: [{args.hidden1}, {args.hidden2}] | 激活函数: {args.activation}")
     print(f"保存目录: {args.save_dir}")
