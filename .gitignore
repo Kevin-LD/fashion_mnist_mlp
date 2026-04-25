@@ -8,4 +8,4 @@ data/
 .vscode/
 
 # Weights & Training histroy
-run/
+runs/

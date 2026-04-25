@@ -4,6 +4,7 @@ import json
 import argparse
 import numpy as np
 from tqdm import tqdm
+from datetime import datetime
 
 # 确保能正确导入当前项目的模块
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -204,9 +205,12 @@ def train(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="用于 Fashion-MNIST 数据集的 3 层 MLP 训练脚本")
     
+    current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
+    default_save_dir = os.path.join('./runs', f'exp_{current_time}')
+
     # 路径与检查点参数
     parser.add_argument('--data_path', type=str, default='./data', help='数据集所在目录路径')
-    parser.add_argument('--save_dir', type=str, default='./runs/exp_01', help='实验结果与模型保存路径')
+    parser.add_argument('--save_dir', type=str, default=default_save_dir, help='实验结果与模型保存路径')
     parser.add_argument('--resume', type=str, default='', help='用于断点续训的模型权重路径 (.pkl 文件)')
     
     # 网络架构参数
