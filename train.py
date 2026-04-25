@@ -176,7 +176,12 @@ def train(args):
                 'epoch': epoch + 1,
                 'last_step': scheduler.last_step,
                 'batch_size': args.batch_size, 
-                'history': history
+                'history': history,
+                'config': {
+                    'hidden1': args.hidden1,
+                    'hidden2': args.hidden2,
+                    'activation': args.activation
+                }
             }
             with open(best_model_path.replace('.pkl', '_meta.json'), 'w') as f:
                 json.dump(meta, f)
