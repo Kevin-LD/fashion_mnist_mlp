@@ -44,6 +44,41 @@ def plot_confusion_matrix(cm, class_names, save_path):
     plt.savefig(save_path)
     plt.close()
 
+def evaluate(model, data_loader, criterion=None, return_preds=False):
+    """
+    在给定数据集上评估模型性能的通用函数
+    """
+    total_loss = 0.0
+    correct = 0
+    total = 0
+    
+    all_preds = [] if return_preds else None
+    all_targets = [] if return_preds else None
+    
+    for X_batch, y_batch in data_loader:
+        logits = model.forward(X_batch)
+        
+        # 如果传入了损失函数，则计算 loss (主要用于 train.py 的验证环节)
+        if criterion is not None:
+            loss = criterion.forward(logits, y_batch)
+            total_loss += loss * X_batch.shape[0]
+        
+        preds = np.argmax(logits, axis=1)
+        correct += np.sum(preds == y_batch)
+        total += X_batch.shape[0]
+        
+        # 如果需要返回预测结果用于可视化 (主要用于 evaluate.py)
+        if return_preds:
+            all_preds.extend(preds)
+            all_targets.extend(y_batch)
+            
+    avg_loss = (total_loss / total) if criterion is not None else None
+    accuracy = correct / total
+    
+    if return_preds:
+        return avg_loss, accuracy, np.array(all_preds), np.array(all_targets)
+    return avg_loss, accuracy
+
 def evaluate_model(args):
     # 类别定义
     class_names = ["T-shirt", "Trouser", "Pullover", "Dress", "Coat", 
@@ -79,13 +114,8 @@ def evaluate_model(args):
 
     # 4. 推理
     print(f"[*] 开始评估...")
-    all_preds = []
-    for X_batch, _ in test_loader:
-        logits = model.forward(X_batch)
-        all_preds.extend(np.argmax(logits, axis=1))
-    
-    all_preds = np.array(all_preds)
-    accuracy = np.mean(all_preds == y_test)
+    # 调用通用的 evaluate 函数，不需要 criterion，但需要返回预测结果
+    _, accuracy, all_preds, _ = evaluate(model, test_loader, criterion=None, return_preds=True)
 
     print("\n" + "="*30)
     print(f"测试准确率: {accuracy*100:.2f}%")

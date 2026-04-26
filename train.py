@@ -15,24 +15,8 @@ from core.loss import CrossEntropyLoss
 from core.optimizer import SGD
 from core.scheduler import ConstantLR, StepLR, LinearLR, CosineAnnealingLR
 
-def evaluate(model, data_loader, criterion):
-    """
-    在给定数据集上评估模型性能
-    """
-    total_loss = 0.0
-    correct = 0
-    total = 0
-    
-    for X_batch, y_batch in data_loader:
-        logits = model.forward(X_batch)
-        loss = criterion.forward(logits, y_batch)
-        total_loss += loss * X_batch.shape[0]
-        
-        preds = np.argmax(logits, axis=1)
-        correct += np.sum(preds == y_batch)
-        total += X_batch.shape[0]
-        
-    return total_loss / total, correct / total
+# 从 evaluate.py 导入统一的 evaluate 函数
+from evaluate import evaluate 
 
 def train(args):
     print("="*60)
@@ -194,6 +178,8 @@ def train(args):
         # Epoch 级评估
         avg_train_loss = epoch_loss_sum / len(train_loader.X)
         avg_train_data_loss = epoch_data_loss_sum / len(train_loader.X)
+        
+        # 使用统一的 evaluate 函数
         val_loss, val_acc = evaluate(model, val_loader, criterion)
         
         # 记录数据
