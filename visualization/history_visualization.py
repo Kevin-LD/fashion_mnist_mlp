@@ -2,7 +2,7 @@ import os
 import json
 import argparse
 import matplotlib.pyplot as plt
-import numpy as np
+from matplotlib.ticker import MaxNLocator
 
 def smooth_curve(points, factor=0.95):
     """
@@ -45,30 +45,33 @@ def plot_history(exp_dir):
     fig, axs = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle('Training History Visualization', fontsize=16)
 
-    # --- 图 1: Epoch 级别的 Data Loss vs Val Loss ---
-    axs[0, 0].plot(epochs, epoch_train_data_loss, 'b-', label='Train Data Loss', marker='o', markersize=4)
-    axs[0, 0].plot(epochs, epoch_val_loss, 'r-', label='Val Loss', marker='s', markersize=4)
-    axs[0, 0].set_title('Epoch Train Data Loss vs Validation Loss')
+    # --- 图 1: Epoch 级别的 Data Loss & Val Loss ---
+    axs[0, 0].plot(epochs, history['epoch']['train_data_loss'], 'b-', label='Train Data Loss', marker='o', markersize=4)
+    axs[0, 0].plot(epochs, history['epoch']['val_loss'], 'r-', label='Val Loss', marker='s', markersize=4)
+    axs[0, 0].set_title('Epoch Train Data Loss & Validation Loss')
     axs[0, 0].set_xlabel('Epoch')
     axs[0, 0].set_ylabel('Loss')
     axs[0, 0].legend()
     axs[0, 0].grid(True, linestyle='--', alpha=0.7)
+    axs[0, 0].xaxis.set_major_locator(MaxNLocator(integer=True))
 
     # --- 图 2: Epoch 级别的 Validation Accuracy ---
-    axs[0, 1].plot(epochs, epoch_val_acc, 'g-', label='Val Accuracy', marker='^', markersize=4)
+    axs[0, 1].plot(epochs, history['epoch']['val_acc'], 'g-', label='Val Accuracy', marker='^', markersize=4)
     axs[0, 1].set_title('Epoch Validation Accuracy')
     axs[0, 1].set_xlabel('Epoch')
     axs[0, 1].set_ylabel('Accuracy')
     axs[0, 1].legend()
     axs[0, 1].grid(True, linestyle='--', alpha=0.7)
+    axs[0, 1].xaxis.set_major_locator(MaxNLocator(integer=True))
 
     # --- 图 3: Epoch 级别的 Total Loss ---
-    axs[1, 0].plot(epochs, epoch_train_loss, 'purple', label='Train Total Loss', marker='d', markersize=4)
+    axs[1, 0].plot(epochs, history['epoch']['train_loss'], 'purple', label='Train Total Loss', marker='d', markersize=4)
     axs[1, 0].set_title('Epoch Total Loss (Data + Regularization)')
     axs[1, 0].set_xlabel('Epoch')
     axs[1, 0].set_ylabel('Total Loss')
     axs[1, 0].legend()
     axs[1, 0].grid(True, linestyle='--', alpha=0.7)
+    axs[1, 0].xaxis.set_major_locator(MaxNLocator(integer=True))
 
     # --- 图 4: Iteration 级别的 Train Loss 与 LR 叠加显示 (双 Y 轴) ---
     color_loss = 'tab:blue'
