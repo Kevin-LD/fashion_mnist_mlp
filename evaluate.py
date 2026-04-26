@@ -5,6 +5,7 @@ import pickle
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 # 确保导入项目模块
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -44,7 +45,7 @@ def plot_confusion_matrix(cm, class_names, save_path):
     plt.savefig(save_path)
     plt.close()
 
-def evaluate(model, data_loader, criterion=None, return_preds=False):
+def evaluate(model, data_loader, criterion=None, return_preds=False, desc="Evaluating"):
     """
     在给定数据集上评估模型性能的通用函数
     """
@@ -55,7 +56,9 @@ def evaluate(model, data_loader, criterion=None, return_preds=False):
     all_preds = [] if return_preds else None
     all_targets = [] if return_preds else None
     
-    for X_batch, y_batch in data_loader:
+    pbar = tqdm(data_loader, desc=desc, leave=False)
+    
+    for X_batch, y_batch in pbar:
         logits = model.forward(X_batch)
         
         # 如果传入了损失函数，则计算 loss (主要用于 train.py 的验证环节)
@@ -71,6 +74,8 @@ def evaluate(model, data_loader, criterion=None, return_preds=False):
         if return_preds:
             all_preds.extend(preds)
             all_targets.extend(y_batch)
+            
+    pbar.close() # 显式关闭进度条
             
     avg_loss = (total_loss / total) if criterion is not None else None
     accuracy = correct / total
@@ -114,8 +119,7 @@ def evaluate_model(args):
 
     # 4. 推理
     print(f"[*] 开始评估...")
-    # 调用通用的 evaluate 函数，不需要 criterion，但需要返回预测结果
-    _, accuracy, all_preds, _ = evaluate(model, test_loader, criterion=None, return_preds=True)
+    _, accuracy, all_preds, _ = evaluate(model, test_loader, criterion=None, return_preds=True, desc="Testing")
 
     print("\n" + "="*30)
     print(f"测试准确率: {accuracy*100:.2f}%")
