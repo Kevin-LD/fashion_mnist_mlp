@@ -26,7 +26,7 @@ def load_search_results(json_path):
     return pd.DataFrame(records)
 
 def plot_marginal_effects(df, save_dir):
-    """绘制每个参数的主效应图 (相当于你提到的按维度看平均值/趋势)"""
+    """绘制每个参数的主效应图"""
     # 排除非参数列
     param_cols = [c for c in df.columns if c not in ['trial', 'val_acc']]
     
@@ -44,9 +44,14 @@ def plot_marginal_effects(df, save_dir):
         is_discrete = df[col].dtype == object or df[col].nunique() <= 5
         
         if is_discrete:
-            # 离散变量：使用箱线图展示均值和分布，叠加散点图展示具体试次
-            sns.boxplot(x=col, y='val_acc', data=df, ax=ax, color='lightgray', showfliers=False)
-            sns.stripplot(x=col, y='val_acc', data=df, ax=ax, alpha=0.7, jitter=True)
+            # 对 lr 和 weight_decay 做统一格式
+            if col in ['lr', 'weight_decay']:
+                plot_df = df.copy()
+                plot_df[col] = plot_df[col].apply(lambda x: f'{x:.1e}')
+            else:
+                plot_df = df
+            sns.boxplot(x=col, y='val_acc', data=plot_df, ax=ax, color='lightgray', showfliers=False)
+            sns.stripplot(x=col, y='val_acc', data=plot_df, ax=ax, alpha=0.7, jitter=True)
             ax.set_title(f'Main Effect: {col}')
         else:
             # 连续变量：散点图 + 趋势线
