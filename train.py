@@ -15,7 +15,6 @@ from core.loss import CrossEntropyLoss
 from core.optimizer import SGD
 from core.scheduler import ConstantLR, StepLR, LinearLR, CosineAnnealingLR
 
-# 从 evaluate.py 导入统一的 evaluate 函数
 from evaluate import evaluate 
 
 def train(args):
@@ -178,8 +177,6 @@ def train(args):
         # Epoch 级评估
         avg_train_loss = epoch_loss_sum / len(train_loader.X)
         avg_train_data_loss = epoch_data_loss_sum / len(train_loader.X)
-        
-        # 使用统一的 evaluate 函数
         val_loss, val_acc = evaluate(model, val_loader, criterion)
         
         # 记录数据

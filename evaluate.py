@@ -1,11 +1,11 @@
 import os
 import sys
 import json
-import pickle
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from core.grad_mode import no_grad
 
 # 确保导入项目模块
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -59,14 +59,17 @@ def evaluate(model, data_loader, criterion=None, return_preds=False, desc="Evalu
     pbar = tqdm(data_loader, desc=desc, leave=False)
     
     for X_batch, y_batch in pbar:
-        logits = model.forward(X_batch)
+        # 禁用梯度
+        with no_grad():
+            logits = model.forward(X_batch)
+
+            # 如果传入了损失函数，则计算 loss (主要用于 train.py 的验证环节)
+            if criterion is not None:
+                loss = criterion.forward(logits, y_batch)
+                total_loss += loss * X_batch.shape[0]
         
-        # 如果传入了损失函数，则计算 loss (主要用于 train.py 的验证环节)
-        if criterion is not None:
-            loss = criterion.forward(logits, y_batch)
-            total_loss += loss * X_batch.shape[0]
+            preds = np.argmax(logits, axis=1)
         
-        preds = np.argmax(logits, axis=1)
         correct += np.sum(preds == y_batch)
         total += X_batch.shape[0]
         

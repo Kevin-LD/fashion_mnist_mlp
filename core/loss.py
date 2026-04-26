@@ -1,4 +1,5 @@
 import numpy as np
+from core.grad_mode import is_grad_enabled
 
 class CrossEntropyLoss:
     def __init__(self):
@@ -19,8 +20,9 @@ class CrossEntropyLoss:
         exps = np.exp(shift_logits)
         probs = exps / np.sum(exps, axis=1, keepdims=True)
         
-        # 缓存预测概率和真实标签，用于反向传播
-        self.cache = (probs, y_true)
+        # 仅在需要求导时缓存预测概率和真实标签
+        if is_grad_enabled():
+            self.cache = (probs, y_true)
         
         # 2. 计算交叉熵损失: L = -sum(y_true * log(probs)) / batch_size
         # 添加 1e-12 防止 log(0)
@@ -34,6 +36,7 @@ class CrossEntropyLoss:
         反向传播
         :return: 梯度 dZ，形状为 (batch_size, num_classes)
         """
+        assert self.cache is not None, "Cannot call backward without forward cache."
         probs, y_true = self.cache
         batch_size = probs.shape[0]
         
@@ -44,5 +47,6 @@ class CrossEntropyLoss:
         # 对于每个样本，在其真实类别所在的维度减去 1
         dZ[np.arange(batch_size), y_true] -= 1
         dZ = dZ / batch_size
+        self.cache = None
         
         return dZ

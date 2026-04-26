@@ -1,4 +1,5 @@
 import numpy as np
+from core.grad_mode import is_grad_enabled
 
 class Linear:
     def __init__(self, in_features, out_features, weight_decay=0.0, init_method='he'):
@@ -36,8 +37,9 @@ class Linear:
         前向传播
         Z = X @ W + b 
         """
-        # 保存 X 用于反向传播
-        self.cache = X
+        # 仅在允许求导时保存 X 用于反向传播
+        if is_grad_enabled():
+            self.cache = X
         return X @ self.W + self.b
 
     def backward(self, dZ):
@@ -46,6 +48,7 @@ class Linear:
         :param dZ: 损失函数对当前层输出 Z 的偏导，形状为 (batch_size, out_features)
         :return: 损失函数对输入 X 的偏导 dX，用于传给前一层
         """
+        assert self.cache is not None, "Cannot call backward without forward cache. Are you in no_grad mode?"
         X = self.cache
         
         # dL/dW = X.T @ dZ
@@ -57,5 +60,6 @@ class Linear:
         # 传给上一层的梯度: dL/dX = dZ @ W.T
         dX = dZ @ self.W.T
         
+        self.cache = None
+        
         return dX
-    
