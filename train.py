@@ -67,6 +67,7 @@ def train(args):
     # 3. 初始化状态与全局步数计算
     start_epoch = 0
     last_step_meta = -1 # 默认从头开始
+    best_val_acc_from_meta = 0.0 # 用于在无 history 时恢复最佳准确率
     
     history = {
         'epoch': {'train_loss': [], 'train_data_loss': [], 'val_loss': [], 'val_acc': [], 'lr': []},
@@ -78,6 +79,7 @@ def train(args):
     total_steps = args.epochs * total_iters_per_epoch
 
     # 4. 断点续训
+    meta_path = ""
     if args.resume and os.path.exists(args.resume):
         print(f"正在从断点恢复模型: {args.resume}")
         model.load_weights(args.resume)
@@ -92,6 +94,7 @@ def train(args):
                 meta = json.load(f)
                 start_epoch = meta.get('epoch', 0)
                 old_batch_size = meta.get('batch_size', args.batch_size)
+                best_val_acc_from_meta = meta.get('best_val_acc', 0.0)
                 
                 if old_batch_size != args.batch_size:
                     print(f"[*] 检测到 batch_size 改变 ({old_batch_size} -> {args.batch_size})，正在自适应调整调度器步数...")
@@ -149,7 +152,8 @@ def train(args):
         os.makedirs(args.save_dir)
         
     best_model_path = os.path.join(args.save_dir, 'best_model.pkl')
-    best_val_acc = max(history['epoch']['val_acc']) if history['epoch']['val_acc'] else 0.0
+    # 计算当前的最佳准确率，如果历史记录为空则使用 meta 中的记录
+    best_val_acc = max(history['epoch']['val_acc']) if history['epoch']['val_acc'] else best_val_acc_from_meta
 
     # 7. 开始训练循环
     for epoch in range(start_epoch, args.epochs):
@@ -171,9 +175,11 @@ def train(args):
             pbar.set_postfix({'loss': f'{loss:.4f}', 'lr': f'{optimizer.lr:.6f}'})
             
             # 记录数据
-            history['iter']['train_loss'].append(float(loss))
-            history['iter']['train_data_loss'].append(float(data_loss))
-            history['iter']['lr'].append(float(optimizer.lr))
+            if not args.no_save_history:
+                history['iter']['train_loss'].append(float(loss))
+                history['iter']['train_data_loss'].append(float(data_loss))
+                history['iter']['lr'].append(float(optimizer.lr))
+                
             epoch_loss_sum += loss * X_batch.shape[0]
             epoch_data_loss_sum += data_loss * X_batch.shape[0]
             
@@ -190,11 +196,13 @@ def train(args):
         avg_train_data_loss = epoch_data_loss_sum / len(train_loader.X)
         val_loss, val_acc = evaluate(model, val_loader, criterion)
         
-        history['epoch']['train_loss'].append(float(avg_train_loss))
-        history['epoch']['train_data_loss'].append(float(avg_train_data_loss))
-        history['epoch']['val_loss'].append(float(val_loss))
-        history['epoch']['val_acc'].append(float(val_acc))
-        history['epoch']['lr'].append(float(optimizer.lr))
+        # 记录数据
+        if not args.no_save_history:
+            history['epoch']['train_loss'].append(float(avg_train_loss))
+            history['epoch']['train_data_loss'].append(float(avg_train_data_loss))
+            history['epoch']['val_loss'].append(float(val_loss))
+            history['epoch']['val_acc'].append(float(val_acc))
+            history['epoch']['lr'].append(float(optimizer.lr))
         
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -203,6 +211,7 @@ def train(args):
                 'epoch': epoch + 1,
                 'last_step': scheduler.last_step,
                 'batch_size': args.batch_size,
+                'best_val_acc': best_val_acc,
                 'config': {
                     'hidden1': args.hidden1,
                     'hidden2': args.hidden2,
