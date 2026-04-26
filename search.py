@@ -31,9 +31,8 @@ def run_search(cli_args):
     search_type = cli_args.type
     num_trials = cli_args.trials
 
-    # 基准配置 (用于缩放 epoch 和 lr)
+    # 基准配置 (用于缩放 lr)
     base_batch_size = 32
-    base_epochs = cli_args.epochs
 
     # 1. 定义搜索空间
     search_space = {
@@ -107,19 +106,16 @@ def run_search(cli_args):
         for k, v in params.items():
             setattr(args, k, v)
 
-        # epoch 和 lr 正比于 Batch size
+        # 根据 Linear Scaling Rule: lr 正比于 Batch size，epoch 保持一致
         scale = args.batch_size / base_batch_size
 
         # lr 正比于 batch size
         original_lr = args.lr
         args.lr = original_lr * scale
 
-        # epoch 正比于 batch size
-        args.epochs = max(1, int(base_epochs * scale))
 
         print(f"[*] Batch Scaling: bs={args.batch_size}, scale={scale:.2f}")
         print(f"[*] Adjusted lr: {original_lr:.2e} -> {args.lr:.2e}")
-        print(f"[*] Adjusted epochs: {base_epochs} -> {args.epochs}")
 
         # 为每个 trial 设置独立路径
         trial_name = f"trial_{i+1}_lr{args.lr:.2e}_h1{args.hidden1}_bs{args.batch_size}"
@@ -171,8 +167,8 @@ if __name__ == '__main__':
                         help='搜索模式: random (随机) 或 grid (网格)')
     parser.add_argument('--trials', type=int, default=5, 
                         help='随机搜索的尝试次数 (网格搜索下此参数失效)')
-    parser.add_argument('--epochs', type=int, default=10, 
-                        help='基准 Epoch (batch size=32 时的值)，实际训练会按比例缩放')
+    parser.add_argument('--epochs', type=int, default=20, 
+                        help='每个 trial (参数组合) 的 epoch 数量')
     parser.add_argument('--data_path', type=str, default='./data', 
                         help='数据集所在目录路径')
     parser.add_argument('--search_dir', type=str, default='', 
