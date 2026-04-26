@@ -31,9 +31,11 @@ def run_search(cli_args):
     search_type = cli_args.type
     num_trials = cli_args.trials
 
+    # 基准配置 (用于缩放 epoch 和 lr)
+    base_batch_size = 32
+    base_epochs = cli_args.epochs
+
     # 1. 定义搜索空间
-    # 对于 grid: 使用 'grid_values' 中的列表
-    # 对于 random: 如果有 'range' 则在范围内采样，否则从 'grid_values' 中随机选
     search_space = {
         'lr': {
             'range': [1e-5, 1e-1], 
@@ -64,37 +66,29 @@ def run_search(cli_args):
 
     # 2. 生成超参数组合列表
     if search_type == 'grid':
-        # 网格搜索：仅使用 grid_values 进行笛卡尔积
         grid_lists = [search_space[k]['grid_values'] for k in keys]
         combinations = [dict(zip(keys, combo)) for combo in itertools.product(*grid_lists)]
         print(f"[*] 启动网格搜索，共计 {len(combinations)} 组参数组合。")
     else:
-        # 随机搜索：根据配置进行连续或离散采样
         print(f"[*] 启动随机搜索，将尝试 {num_trials} 组随机参数组合。")
         for _ in range(num_trials):
             combo = {}
             for k, config in search_space.items():
                 if 'range' in config:
-                    # 连续空间采样
                     low, high = config['range']
                     if config.get('scale') == 'log':
-                        # 对数尺度随机采样: 10^uniform(log10(low), log10(high))
                         val = 10 ** random.uniform(math.log10(low), math.log10(high))
                     else:
-                        # 线性尺度随机采样
                         val = random.uniform(low, high)
                     combo[k] = val
                 else:
-                    # 离散空间采样
                     combo[k] = random.choice(config['grid_values'])
             combinations.append(combo)
 
     # --- 路径处理逻辑 ---
     if cli_args.search_dir:
-        # 如果命令行传入了路径，则使用指定路径
         search_dir = cli_args.search_dir
     else:
-        # 默认命名逻辑：./runs/search_{type}_{timestamp}
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         search_dir = f'./runs/search_{search_type}_{timestamp}'
     
@@ -109,16 +103,29 @@ def run_search(cli_args):
         print(f"Trial [{i+1}/{len(combinations)}] - 当前参数: {params}")
         print("="*50)
 
-        # 构造当前 Trial 的 Args (结合命令行基础参数与搜索得到的动态参数)
         args = get_base_args(cli_args)
         for k, v in params.items():
-            setattr(args, k, v) # 将动态参数注入 args
-            
-        # 为每个 trial 设置独立的数据保存路径
+            setattr(args, k, v)
+
+        # epoch 和 lr 正比于 Batch size
+        scale = args.batch_size / base_batch_size
+
+        # lr 正比于 batch size
+        original_lr = args.lr
+        args.lr = original_lr * scale
+
+        # epoch 正比于 batch size
+        args.epochs = max(1, int(base_epochs * scale))
+
+        print(f"[*] Batch Scaling: bs={args.batch_size}, scale={scale:.2f}")
+        print(f"[*] Adjusted lr: {original_lr:.2e} -> {args.lr:.2e}")
+        print(f"[*] Adjusted epochs: {base_epochs} -> {args.epochs}")
+
+        # 为每个 trial 设置独立路径
         trial_name = f"trial_{i+1}_lr{args.lr:.2e}_h1{args.hidden1}_bs{args.batch_size}"
         args.save_dir = os.path.join(search_dir, "trials", trial_name)
 
-        # 4. 执行训练并捕获异常
+        # 4. 执行训练
         try:
             best_val_acc, history = train(args)
             
@@ -139,7 +146,7 @@ def run_search(cli_args):
                 'error': str(e)
             })
 
-    # 5. 汇总并输出结果
+    # 5. 汇总结果
     print("\n" + "="*60)
     print("搜索完成！(Search Completed)")
     print("="*60)
@@ -158,15 +165,14 @@ def run_search(cli_args):
     print(f"\n完整的搜索报告已保存至: {summary_path}")
 
 if __name__ == '__main__':
-    # 配置命令行解析
     parser = argparse.ArgumentParser(description="超参数搜索脚本")
     
     parser.add_argument('--type', type=str, default='random', choices=['grid', 'random'],
                         help='搜索模式: random (随机) 或 grid (网格)')
     parser.add_argument('--trials', type=int, default=5, 
                         help='随机搜索的尝试次数 (网格搜索下此参数失效)')
-    parser.add_argument('--epochs', type=int, default=15, 
-                        help='每个 Trial 运行的 Epoch 数量')
+    parser.add_argument('--epochs', type=int, default=10, 
+                        help='基准 Epoch (batch size=32 时的值)，实际训练会按比例缩放')
     parser.add_argument('--data_path', type=str, default='./data', 
                         help='数据集所在目录路径')
     parser.add_argument('--search_dir', type=str, default='', 
@@ -174,5 +180,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # 启动搜索
     run_search(args)
