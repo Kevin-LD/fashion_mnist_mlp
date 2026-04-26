@@ -104,7 +104,7 @@ def run_search(search_type='random', num_trials=10):
             
         # 为每个 trial 设置独立的数据保存路径 (对浮点数进行格式化防止文件名过长)
         trial_name = f"trial_{i+1}_lr{args.lr:.2e}_h1{args.hidden1}_bs{args.batch_size}"
-        args.save_dir = os.path.join(search_dir, trial_name)
+        args.save_dir = os.path.join(search_dir, "trials", trial_name)
 
         # 4. 执行训练并捕获异常
         try:
