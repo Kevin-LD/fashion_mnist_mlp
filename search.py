@@ -4,6 +4,7 @@ import random
 import math
 import itertools
 import argparse
+import copy
 from datetime import datetime
 from argparse import Namespace
 
@@ -23,7 +24,8 @@ def get_base_args(cli_args):
         no_save_history=True,           # [!] 搜索时不保存历史记录，节省磁盘空间
         # 已经搜索过的超参数
         activation='relu',
-        hidden1=512
+        lr=1e-2,
+        batch_size=32
     )
 
 def run_search(cli_args):
@@ -39,28 +41,28 @@ def run_search(cli_args):
 
     # 1. 定义搜索空间
     search_space = {
-        'lr': {
-            'range': [1e-5, 1e-1], 
-            'scale': 'log', 
-            'grid_values': [5e-2, 1e-2, 5e-3]
-        },
-        'hidden2': {
-            'grid_values': [128, 256]
-        },
         'weight_decay': {
             'range': [1e-6, 1e-3], 
             'scale': 'log', 
-            'grid_values': [1e-4, 1e-5]
+            'grid_values': [1e-4, 1e-5, 1e-6, 0]
         },
-        'batch_size': {
-            'grid_values': [32, 64]
+        'hidden1': {
+            'grid_values': [256, 512]
+        },
+        'hidden2': {
+            'grid_values': [64, 128]
         }
         # 已经搜索过的超参数
         # 'activation': {
         #     'grid_values': ['relu', 'tanh']
         # },
-        # 'hidden1': {
-        #     'grid_values': [256, 512]
+        # 'lr': {
+        #     'range': [1e-5, 1e-1], 
+        #     'scale': 'log', 
+        #     'grid_values': [5e-2, 1e-2, 5e-3]
+        # },
+        # 'batch_size': {
+        #     'grid_values': [32, 64]
         # },
     }
 
@@ -131,10 +133,8 @@ def run_search(cli_args):
             trial_result = {
                 'trial': i + 1,
                 'params': params,
-                'scaled_lr': args.lr,               # 记录根据 batch size 放缩的 lr
-                'base_batch_size': base_batch_size, # 记录基准 batch size，方便使用者推算
+                'full_params': copy.deepcopy(vars(args)),
                 'best_val_acc': best_val_acc,
-                'save_dir': args.save_dir
             }
             results.append(trial_result)
             
@@ -143,8 +143,7 @@ def run_search(cli_args):
             results.append({
                 'trial': i + 1,
                 'params': params,
-                'scaled_lr': args.lr,
-                'base_batch_size': base_batch_size,
+                'full_params': copy.deepcopy(vars(args)),
                 'best_val_acc': 0.0,
                 'error': str(e)
             })
@@ -160,12 +159,16 @@ def run_search(cli_args):
     for i in range(min(3, len(results))):
         res = results[i]
         p = res['params']
+        fp = res['full_params']
+
         print(f"Top {i+1} | Acc: {res['best_val_acc']*100:.2f}%")
-        print(f"  > 搜索参数: lr={p['lr']:.2e}, batch_size={p['batch_size']}")
+
+        print(f"  > 搜索参数: {p}")
         
         print(f"  [!] 最终训练建议：")
-        print(f"  - 若保持 batch_size={p['batch_size']}, 请直接使用 lr={res['scaled_lr']:.2e}")
-        print(f"  - 若更改 batch_size, 请按比例缩放: Final_LR = {p['lr']:.2e} * (New_BS / {res['base_batch_size']})")
+        print(f"  - 当前 lr 已根据 batch_size={fp['batch_size']} 进行线性缩放")
+        print(f"  - 若保持 batch_size={fp['batch_size']}, 请直接使用 lr={fp['lr']:.2e}")
+        print(f"  - 若更改 batch_size, 请按比例缩放: Final_LR = {fp['lr']:.2e} * (New_BS / {fp['batch_size']})")
         print("-" * 30)
 
     summary_path = os.path.join(search_dir, 'search_summary.json')
