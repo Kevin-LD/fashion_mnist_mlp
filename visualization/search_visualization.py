@@ -31,12 +31,23 @@ def plot_marginal_effects(df, save_dir):
     param_cols = [c for c in df.columns if c not in ['trial', 'val_acc']]
     
     num_params = len(param_cols)
-    cols = 3
+    if num_params == 0:
+        return
+
+    # 自适应计算列数 (cols) 和行数 (rows)
+    if num_params <= 3:
+        cols = num_params
+    elif num_params == 4:
+        cols = 2
+    else:
+        cols = 3  # 默认每行 3 个，如果参数非常多也可以改为 4
+        
     rows = int(np.ceil(num_params / cols))
     
-    fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows))
+    fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows), squeeze=False)
     axes = axes.flatten()
     
+    i = 0
     for i, col in enumerate(param_cols):
         ax = axes[i]
         
@@ -113,7 +124,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--save_dir', 
         type=str, 
-        help='指定可视化结果的保存目录。如果不提供，将默认保存在 JSON 文件同级目录下。'
+        help='指定可视化结果的保存目录。如果不提供，将默认保存在 JSON 文件同级目录下的。'
     )
     
     args = parser.parse_args()
@@ -127,13 +138,14 @@ if __name__ == '__main__':
     # 2. 确定 save_dir
     if args.save_dir:
         save_dir = args.save_dir
-        # 如果指定的保存目录不存在，则创建它
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-            print(f"[*] 已创建保存目录: {save_dir}")
     else:
         # 如果没指定，则使用 JSON 文件所在的目录
-        save_dir = os.path.dirname(target_json)
+        save_dir = os.path.join(os.path.dirname(target_json), "exp_figures")
+    
+    # 如果指定的保存目录不存在，则创建它
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+        print(f"[*] 已创建保存目录: {save_dir}")
 
     # 3. 执行可视化
     print(f"[*] 正在分析: {target_json}")
