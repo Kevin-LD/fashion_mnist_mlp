@@ -20,7 +20,10 @@ def get_base_args(cli_args):
         scheduler='cosine',             # 搜索时固定使用一种表现较好的调度器
         step_size=10,
         gamma=0.1,
-        no_save_history=True            # [!] 搜索时不保存历史记录，节省磁盘空间
+        no_save_history=True,           # [!] 搜索时不保存历史记录，节省磁盘空间
+        # 已经搜索过的超参数
+        activation='relu',
+        hidden1=512
     )
 
 def run_search(cli_args):
@@ -39,25 +42,26 @@ def run_search(cli_args):
         'lr': {
             'range': [1e-5, 1e-1], 
             'scale': 'log', 
-            'grid_values': [1e-2, 1e-3]
-        },
-        'hidden1': {
-            'grid_values': [256, 512]
+            'grid_values': [5e-2, 1e-2, 5e-3]
         },
         'hidden2': {
-            'grid_values': [64, 128]
+            'grid_values': [128, 256]
         },
         'weight_decay': {
             'range': [1e-6, 1e-3], 
             'scale': 'log', 
             'grid_values': [1e-4, 1e-5]
         },
-        'activation': {
-            'grid_values': ['relu', 'tanh']
-        },
         'batch_size': {
             'grid_values': [32, 64]
         }
+        # 已经搜索过的超参数
+        # 'activation': {
+        #     'grid_values': ['relu', 'tanh']
+        # },
+        # 'hidden1': {
+        #     'grid_values': [256, 512]
+        # },
     }
 
     keys = list(search_space.keys())
@@ -113,7 +117,6 @@ def run_search(cli_args):
         original_lr = args.lr
         args.lr = original_lr * scale
 
-
         print(f"[*] Batch Scaling: bs={args.batch_size}, scale={scale:.2f}")
         print(f"[*] Adjusted lr: {original_lr:.2e} -> {args.lr:.2e}")
 
@@ -123,11 +126,13 @@ def run_search(cli_args):
 
         # 4. 执行训练
         try:
-            best_val_acc, history = train(args)
+            best_val_acc, _ = train(args)
             
             trial_result = {
                 'trial': i + 1,
                 'params': params,
+                'scaled_lr': args.lr,               # 记录根据 batch size 放缩的 lr
+                'base_batch_size': base_batch_size, # 记录基准 batch size，方便使用者推算
                 'best_val_acc': best_val_acc,
                 'save_dir': args.save_dir
             }
@@ -138,21 +143,30 @@ def run_search(cli_args):
             results.append({
                 'trial': i + 1,
                 'params': params,
+                'scaled_lr': args.lr,
+                'base_batch_size': base_batch_size,
                 'best_val_acc': 0.0,
                 'error': str(e)
             })
 
-    # 5. 汇总结果
+# 5. 汇总结果
     print("\n" + "="*60)
     print("搜索完成！(Search Completed)")
     print("="*60)
     
     results = sorted(results, key=lambda x: x.get('best_val_acc', 0.0), reverse=True)
     
-    print("\nTop 3 参数组合:")
+    print("\nTop 3 推荐配置:")
     for i in range(min(3, len(results))):
         res = results[i]
-        print(f"Top {i+1} | Acc: {res['best_val_acc']*100:.2f}% | Params: {res['params']}")
+        p = res['params']
+        print(f"Top {i+1} | Acc: {res['best_val_acc']*100:.2f}%")
+        print(f"  > 搜索参数: lr={p['lr']:.2e}, batch_size={p['batch_size']}")
+        
+        print(f"  [!] 最终训练建议：")
+        print(f"  - 若保持 batch_size={p['batch_size']}, 请直接使用 lr={res['scaled_lr']:.2e}")
+        print(f"  - 若更改 batch_size, 请按比例缩放: Final_LR = {p['lr']:.2e} * (New_BS / {res['base_batch_size']})")
+        print("-" * 30)
 
     summary_path = os.path.join(search_dir, 'search_summary.json')
     with open(summary_path, 'w') as f:
@@ -165,7 +179,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--type', type=str, default='random', choices=['grid', 'random'],
                         help='搜索模式: random (随机) 或 grid (网格)')
-    parser.add_argument('--trials', type=int, default=5, 
+    parser.add_argument('--trials', type=int, default=30, 
                         help='随机搜索的尝试次数 (网格搜索下此参数失效)')
     parser.add_argument('--epochs', type=int, default=20, 
                         help='每个 trial (参数组合) 的 epoch 数量')
