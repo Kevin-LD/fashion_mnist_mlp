@@ -10,9 +10,8 @@ data/
 # Weights & Training histroy
 runs/
 
-# Latex
-*.aux
-*.log
-*.out
-*.synctex.gz
-*.pdf
+# report
+report/
+
+# figures
+figures/
