@@ -18,9 +18,8 @@ def smooth_curve(points, factor=0.95):
             smoothed_points.append(point)
     return smoothed_points
 
-def plot_history(exp_dir):
-    # 1. 确定历史文件路径
-    history_path = os.path.join(exp_dir, 'history.json')
+def plot_history(history_path):
+    # 1. 历史文件不存在
     if not os.path.exists(history_path):
         print(f"找不到历史记录文件: {history_path}")
         return
@@ -46,8 +45,8 @@ def plot_history(exp_dir):
     fig.suptitle('Training History Visualization', fontsize=16)
 
     # --- 图 1: Epoch 级别的 Data Loss & Val Loss ---
-    axs[0, 0].plot(epochs, history['epoch']['train_data_loss'], 'b-', label='Train Data Loss', marker='o', markersize=4)
-    axs[0, 0].plot(epochs, history['epoch']['val_loss'], 'r-', label='Val Loss', marker='s', markersize=4)
+    axs[0, 0].plot(epochs, epoch_train_data_loss, 'b-', label='Train Data Loss', marker='o', markersize=4)
+    axs[0, 0].plot(epochs, epoch_val_loss, 'r-', label='Val Loss', marker='s', markersize=4)
     axs[0, 0].set_title('Epoch Train Data Loss & Validation Loss')
     axs[0, 0].set_xlabel('Epoch')
     axs[0, 0].set_ylabel('Loss')
@@ -56,7 +55,7 @@ def plot_history(exp_dir):
     axs[0, 0].xaxis.set_major_locator(MaxNLocator(integer=True))
 
     # --- 图 2: Epoch 级别的 Validation Accuracy ---
-    axs[0, 1].plot(epochs, history['epoch']['val_acc'], 'g-', label='Val Accuracy', marker='^', markersize=4)
+    axs[0, 1].plot(epochs, epoch_val_acc, 'g-', label='Val Accuracy', marker='^', markersize=4)
     axs[0, 1].set_title('Epoch Validation Accuracy')
     axs[0, 1].set_xlabel('Epoch')
     axs[0, 1].set_ylabel('Accuracy')
@@ -65,7 +64,7 @@ def plot_history(exp_dir):
     axs[0, 1].xaxis.set_major_locator(MaxNLocator(integer=True))
 
     # --- 图 3: Epoch 级别的 Total Loss ---
-    axs[1, 0].plot(epochs, history['epoch']['train_loss'], 'purple', label='Train Total Loss', marker='d', markersize=4)
+    axs[1, 0].plot(epochs, epoch_train_loss, 'purple', label='Train Total Loss', marker='d', markersize=4)
     axs[1, 0].set_title('Epoch Total Loss (Data + Regularization)')
     axs[1, 0].set_xlabel('Epoch')
     axs[1, 0].set_ylabel('Total Loss')
@@ -106,6 +105,7 @@ def plot_history(exp_dir):
     fig.subplots_adjust(top=0.9) # 给主标题留出空间
 
     # 4. 保存图表并显示
+    exp_dir = os.path.dirname(history_path)
     save_dir = os.path.join(exp_dir, 'exp_figures')
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -120,11 +120,12 @@ if __name__ == '__main__':
     root_dir = os.path.dirname(tools_dir)
     
     default_exp_dir = os.path.join(root_dir, 'runs', 'exp_01')
+    default_history_path = os.path.join(default_exp_dir, 'history.json')
 
     parser = argparse.ArgumentParser(description='Visualize training history.')
-    parser.add_argument('--exp_dir', type=str, default=default_exp_dir, 
-                        help='Path to the experiment directory containing history.json')
+    parser.add_argument('--path', type=str, default=default_history_path, 
+                        help='history.json 的路径')
     
     args = parser.parse_args()
     
-    plot_history(args.exp_dir)
+    plot_history(args.path)
