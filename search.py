@@ -24,7 +24,6 @@ def get_base_args(cli_args):
         no_save_history=True,           # [!] 搜索时不保存历史记录，节省磁盘空间
         # 已经搜索过的超参数
         activation='relu',
-        lr=1e-2,
         batch_size=32
     )
 
@@ -41,25 +40,29 @@ def run_search(cli_args):
 
     # 1. 定义搜索空间
     search_space = {
+        'lr': {
+            'range': [1e-5, 1e-1], 
+            'scale': 'log', 
+            'grid_values': [2e-2, 1e-2, 5e-3]
+        },
         'weight_decay': {
             'range': [1e-6, 1e-3], 
             'scale': 'log', 
-            'grid_values': [1e-4, 1e-5, 1e-6, 0]
+            'grid_values': [1e-4, 1e-5]
         },
         'hidden1': {
             'grid_values': [256, 512]
         },
         'hidden2': {
             'grid_values': [64, 128]
+        },
+        'dropout_p': {
+            'range': [0.0, 0.5],
+            'grid_values': [0.2, 0.3, 0.5]
         }
         # 已经搜索过的超参数
         # 'activation': {
         #     'grid_values': ['relu', 'tanh']
-        # },
-        # 'lr': {
-        #     'range': [1e-5, 1e-1], 
-        #     'scale': 'log', 
-        #     'grid_values': [5e-2, 1e-2, 5e-3]
         # },
         # 'batch_size': {
         #     'grid_values': [32, 64]
@@ -123,7 +126,7 @@ def run_search(cli_args):
         print(f"[*] Adjusted lr: {original_lr:.2e} -> {args.lr:.2e}")
 
         # 为每个 trial 设置独立路径
-        trial_name = f"trial_{i+1}_lr{args.lr:.2e}_h1{args.hidden1}_bs{args.batch_size}"
+        trial_name = f"trial_{i+1}_lr{args.lr:.2e}_h1{args.hidden1}_bs{args.batch_size}_dp{args.dropout_p:.2f}"
         args.save_dir = os.path.join(search_dir, "trials", trial_name)
 
         # 4. 执行训练
@@ -148,7 +151,7 @@ def run_search(cli_args):
                 'error': str(e)
             })
 
-# 5. 汇总结果
+    # 5. 汇总结果
     print("\n" + "="*60)
     print("搜索完成！(Search Completed)")
     print("="*60)
@@ -184,7 +187,7 @@ if __name__ == '__main__':
                         help='搜索模式: random (随机) 或 grid (网格)')
     parser.add_argument('--trials', type=int, default=30, 
                         help='随机搜索的尝试次数 (网格搜索下此参数失效)')
-    parser.add_argument('--epochs', type=int, default=20, 
+    parser.add_argument('--epochs', type=int, default=30, 
                         help='每个 trial (参数组合) 的 epoch 数量')
     parser.add_argument('--data_path', type=str, default='./data', 
                         help='数据集所在目录路径')
