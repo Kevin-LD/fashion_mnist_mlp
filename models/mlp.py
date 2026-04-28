@@ -1,15 +1,17 @@
 import numpy as np
 import pickle
-from core.layers import Linear
+from core.layers import Linear, Dropout  # 确保 core.layers 中已有 Dropout 类
 from core.activations import ReLU, Sigmoid, Tanh
 
 class ThreeLayerMLP:
     def __init__(self, input_dim, hidden_dim1, hidden_dim2, num_classes, 
-                 weight_decay=0.0, activation='relu', init_method=None):
+                 weight_decay=0.0, activation='relu', dropout_p=0.0, init_method=None):
         """
         三层神经网络模型
         """
         self.weight_decay = weight_decay
+        self.dropout_p = dropout_p
+        self.training = True  # 初始化默认为训练模式
         
         # 1. 自动选择初始化方式
         if init_method is None:
@@ -31,12 +33,21 @@ class ThreeLayerMLP:
         else:
             raise ValueError("Unsupported activation function")
 
-        # 3. 初始化网络层，将 init_method 传入每一个 Linear 层
+        # 3. 初始化 Dropout 层
+        self.drop1 = Dropout(p=dropout_p)
+        self.drop2 = Dropout(p=dropout_p)
+
+        # 4. 初始化网络层
         self.fc1 = Linear(input_dim, hidden_dim1, weight_decay=weight_decay, init_method=init_method)
         self.fc2 = Linear(hidden_dim1, hidden_dim2, weight_decay=weight_decay, init_method=init_method)
         self.fc3 = Linear(hidden_dim2, num_classes, weight_decay=weight_decay, init_method=init_method)
 
-        self.layers = [self.fc1, self.act1, self.fc2, self.act2, self.fc3]
+        # 组织层级结构：FC -> Act -> Dropout
+        self.layers = [
+            self.fc1, self.act1, self.drop1,
+            self.fc2, self.act2, self.drop2,
+            self.fc3
+        ]
 
     def forward(self, X):
         """
@@ -50,7 +61,6 @@ class ThreeLayerMLP:
     def backward(self, dL_dZ_final):
         """
         反向传播
-        :param dL_dZ_final: 损失函数对输出层 logits 的梯度
         """
         dout = dL_dZ_final
         # 逆序遍历层并执行 backward
@@ -58,9 +68,27 @@ class ThreeLayerMLP:
             dout = layer.backward(dout)
         return dout
 
+    def train(self):
+        """
+        切换模型为训练模式：开启 Dropout 并更新属性
+        """
+        self.training = True
+        for layer in self.layers:
+            if hasattr(layer, 'train'):
+                layer.train()
+
+    def eval(self):
+        """
+        切换模型为评估模式：关闭 Dropout 并更新属性
+        """
+        self.training = False
+        for layer in self.layers:
+            if hasattr(layer, 'eval'):
+                layer.eval()
+
     def total_regularization_loss(self):
         """
-        计算所有全连接层的 L2 正则化惩罚项: (lambda/2) * sum(W^2)
+        计算所有全连接层的 L2 正则化惩罚项
         """
         reg_loss = 0.0
         for layer in self.layers:
@@ -70,7 +98,7 @@ class ThreeLayerMLP:
 
     def save_weights(self, path):
         """
-        保存权重到二进制文件 (pickle 格式)
+        保存权重到二进制文件
         """
         weights = {
             'fc1_W': self.fc1.W, 'fc1_b': self.fc1.b,

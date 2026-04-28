@@ -63,3 +63,44 @@ class Linear:
         self.cache = None
         
         return dX
+
+class Dropout:
+    def __init__(self, p=0.5):
+        self.p = p
+        self.mask = None
+        self.training = True 
+
+    def forward(self, X):
+        # 如果是评估模式或者 p=0，显式将 mask 置为 None
+        if not self.training or self.p == 0:
+            self.mask = None
+            return X
+        
+        keep_prob = 1 - self.p
+        # 生成 mask 并进行缩放 (Inverted Dropout)
+        mask = (np.random.rand(*X.shape) > self.p) / keep_prob
+        
+        # 只有需要梯度时才保存 mask
+        if is_grad_enabled():
+            self.mask = mask
+        else:
+            self.mask = None
+            
+        return X * mask
+
+    def backward(self, dX_out):
+        """
+        反向传播修正版
+        """
+        # 如果 self.mask 是 None，说明前向传播没做 drop_out
+        if self.mask is None:
+            return dX_out
+            
+        # 否则，按照前向传播的掩码过滤梯度
+        return dX_out * self.mask
+
+    def train(self):
+        self.training = True
+
+    def eval(self):
+        self.training = False
