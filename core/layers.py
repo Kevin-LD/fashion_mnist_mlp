@@ -90,7 +90,7 @@ class Dropout:
 
     def backward(self, dX_out):
         """
-        反向传播修正版
+        反向传播
         """
         # 如果 self.mask 是 None，说明前向传播没做 drop_out
         if self.mask is None:
