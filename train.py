@@ -22,7 +22,7 @@ def train(args):
     print(f"学习率: {args.lr} | 权重衰减: {args.weight_decay} | 调度器: {args.scheduler}")
     print(f"批次大小: 训练集 {args.batch_size}, 验证集 {args.val_batch_size}")
     print(f"隐藏层维度: [{args.hidden1}, {args.hidden2}] | 激活函数: {args.activation}")
-    print(f"保存目录: {args.save_dir}")
+    print(f"Dropout 概率: {args.dropout_p} | 保存目录: {args.save_dir}")
     print("="*60)
 
     # 1. 准备数据
@@ -42,7 +42,8 @@ def train(args):
         hidden_dim2=args.hidden2,
         num_classes=10,
         weight_decay=args.weight_decay,
-        activation=args.activation
+        activation=args.activation,
+        dropout_p=args.dropout_p
     )
     criterion = CrossEntropyLoss()
 
@@ -77,6 +78,26 @@ def train(args):
                 start_epoch = meta.get('epoch', 0)
                 old_batch_size = meta.get('batch_size', args.batch_size)
                 best_val_acc_from_meta = meta.get('best_val_acc', 0.0)
+                saved_dropout = meta.get('config', {}).get('dropout_p', 0.0)
+
+                # 处理 Dropout 断点续训逻辑
+                user_provided_dropout = '--dropout_p' in sys.argv
+                
+                if user_provided_dropout:
+                    # 如果用户显式输入了 dropout_p，听用户的，并给出警告
+                    if saved_dropout != args.dropout_p:
+                        print(f"[*] 警告: 断点配置(p={saved_dropout}) 与当前输入的参数(p={args.dropout_p}) 不一致！")
+                        print(f"[*] 将遵从用户输入，使用当前的 Dropout 概率 {args.dropout_p}。")
+                        model.drop1.p = args.dropout_p
+                        model.drop2.p = args.dropout_p
+                else:
+                    # 如果用户没输入，听 meta 当中的，以保证连续性
+                    if saved_dropout != args.dropout_p:
+                        print(f"[*] 提示: 检测到默认参数(p={args.dropout_p}) 与断点配置(p={saved_dropout}) 不一致。")
+                        print(f"[*] 用户未显式指定，正在自动恢复使用断点中的 Dropout 概率 {saved_dropout} 以保证训练连续性。")
+                        args.dropout_p = saved_dropout
+                        model.drop1.p = saved_dropout
+                        model.drop2.p = saved_dropout
                 
                 if old_batch_size != args.batch_size:
                     print(f"[*] 检测到 batch_size 改变 ({old_batch_size} -> {args.batch_size})，正在自适应调整调度器步数...")
@@ -139,6 +160,9 @@ def train(args):
 
     # 7. 开始训练循环
     for epoch in range(start_epoch, args.epochs):
+        # 开启训练模式 (启用 Dropout) 
+        model.train()
+        
         epoch_loss_sum = 0.0
         epoch_data_loss_sum = 0.0
         
@@ -173,7 +197,6 @@ def train(args):
         if args.scheduler in ['step', 'constant']:
             scheduler.step()
             
-        # Epoch 级评估
         avg_train_loss = epoch_loss_sum / len(train_loader.X)
         avg_train_data_loss = epoch_data_loss_sum / len(train_loader.X)
         val_loss, val_acc = evaluate(model, val_loader, criterion)
@@ -197,7 +220,8 @@ def train(args):
                 'config': {
                     'hidden1': args.hidden1,
                     'hidden2': args.hidden2,
-                    'activation': args.activation
+                    'activation': args.activation,
+                    'dropout_p': args.dropout_p
                 }
             }
             with open(best_model_path.replace('.pkl', '_meta.json'), 'w') as f:
@@ -234,6 +258,7 @@ if __name__ == '__main__':
     parser.add_argument('--hidden1', type=int, default=256, help='第一个隐藏层的神经元数量')
     parser.add_argument('--hidden2', type=int, default=128, help='第二个隐藏层的神经元数量')
     parser.add_argument('--activation', type=str, default='relu', choices=['relu', 'sigmoid', 'tanh'], help='网络使用的激活函数')
+    parser.add_argument('--dropout_p', type=float, default=0.0, help='Dropout 丢弃概率 (0.0 表示不使用)')
     
     # 优化与训练参数
     parser.add_argument('--epochs', type=int, default=30, help='训练的总轮数 (Epochs)')

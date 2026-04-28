@@ -24,6 +24,12 @@ def evaluate(model, data_loader, criterion=None, return_preds=False, desc="Evalu
     all_targets = [] if return_preds else None
     
     pbar = tqdm(data_loader, desc=desc, leave=False)
+
+    # 记录模型状态
+    was_training = getattr(model, 'training', True)
+
+    # 开启评估模式 (禁用 drop_out)
+    model.eval()
     
     for X_batch, y_batch in pbar:
         # 禁用梯度
@@ -49,6 +55,10 @@ def evaluate(model, data_loader, criterion=None, return_preds=False, desc="Evalu
             
     avg_loss = (total_loss / total) if criterion is not None else None
     accuracy = correct / total
+
+    # 恢复模型状态
+    if was_training:
+        model.train()
     
     if return_preds:
         return avg_loss, accuracy, np.array(all_preds), np.array(all_targets)
