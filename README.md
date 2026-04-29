@@ -1,5 +1,5 @@
-# Fashion-MNIST MLP 训练与评估
-本项目基于三层多层感知机（MLP）对 Fashion-MNIST 数据集进行分类，所有组件均手动实现，不依赖 PyTorch 等深度学习框架。提供训练脚本 `train.py` 和评估脚本 `evaluate.py`。
+# Fashion-MNIST MLP
+本项目基于三层多层感知机（MLP）对 Fashion-MNIST 数据集进行分类，所有组件均手动实现，不依赖 PyTorch 等深度学习框架。
 ## 环境依赖
 请使用 Python 3.12 运行。安装所需依赖：
 `pip install -r requirements.txt`
