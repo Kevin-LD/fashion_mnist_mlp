@@ -39,9 +39,9 @@ def extract_weights(model_path):
         print(f"Failed to load weights: {e}")
         return None
 
-def plot_weight_visualization(weights, save_path=None, num_neurons=64):
+def plot_weight_visualization(weights, save_path=None, num_neurons=64, col_idx=None):
     """
-    将权重矩阵可视化为图像网格
+    将权重矩阵可视化。若指定 col_idx 则显示单列，否则显示图像网格。
     """
     input_size, hidden_size = weights.shape
     
@@ -50,30 +50,42 @@ def plot_weight_visualization(weights, save_path=None, num_neurons=64):
     if img_dim * img_dim != input_size:
         print(f"Warning: Input size {input_size} is not a perfect square.")
 
-    # 确定显示数量和网格大小
-    num_to_show = min(num_neurons, hidden_size)
-    grid_size = int(math.ceil(math.sqrt(num_to_show)))
+    # 情况 A: 指定了可视化的某一列
+    if col_idx is not None:
+        if col_idx < 0 or col_idx >= hidden_size:
+            print(f"Error: Column index {col_idx} is out of range (0-{hidden_size-1}).")
+            return
 
-    fig, axes = plt.subplots(grid_size, grid_size, figsize=(10, 10))
-    fig.suptitle('Weight Visualization: 1st Hidden Layer (fc1)', fontsize=16)
+        w_vector = weights[:, col_idx]
+        w_img = w_vector.reshape(img_dim, img_dim)
+        vmax = np.abs(w_img).max()
 
-    im = None
-    for i in range(grid_size * grid_size):
-        ax = axes.flat[i]
-        if i < num_to_show:
-            w_vector = weights[:, i]
-            w_img = w_vector.reshape(img_dim, img_dim)
-            
-            # 使用发散型色图 RdBu
-            vmax = np.abs(w_img).max()
-            im = ax.imshow(w_img, cmap='RdBu', vmin=-vmax, vmax=vmax)
-        ax.axis('off')
+        plt.figure(figsize=(6, 5))
+        im = plt.imshow(w_img, cmap='RdBu', vmin=-vmax, vmax=vmax)
+        plt.title(f'Weight Visualization: fc1 Column {col_idx}')
+        plt.colorbar(im)
+        plt.axis('off')
+    # 情况 B: 默认展示网格
+    else:
+        # 确定显示数量和网格大小
+        num_to_show = min(num_neurons, hidden_size)
+        grid_size = int(math.ceil(math.sqrt(num_to_show)))
 
-    # 添加颜色条
-    fig.subplots_adjust(right=0.9, hspace=0.1, wspace=0.1)
-    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
-    if im:
-        fig.colorbar(im, cax=cbar_ax)
+        fig, axes = plt.subplots(grid_size, grid_size, figsize=(10, 10))
+        fig.suptitle('Weight Visualization: 1st Hidden Layer (fc1)', fontsize=16)
+
+        im = None
+        for i in range(grid_size * grid_size):
+            ax = axes.flat[i]
+            if i < num_to_show:
+                w_vector = weights[:, i]
+                w_img = w_vector.reshape(img_dim, img_dim)
+                
+                # 使用发散型色图 RdBu
+                vmax = np.abs(w_img).max()
+                im = ax.imshow(w_img, cmap='RdBu', vmin=-vmax, vmax=vmax)
+            ax.axis('off')
+
 
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
@@ -100,9 +112,19 @@ def run_visualize(args):
     # 3. 执行绘图
     model_dir = os.path.dirname(args.model_path)
     save_dir = args.save_dir if args.save_dir else os.path.join(model_dir, 'exp_figures')
-    save_path = os.path.join(save_dir, 'fc1_weights_pattern.png')
     
-    plot_weight_visualization(weights, save_path=save_path)
+    # 如果指定了列，修改保存文件名
+    if args.column is not None:
+        save_name = f'fc1_weights_col_{args.column}.png'
+    else:
+        save_name = 'fc1_weights_pattern.png'
+        
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+        
+    save_path = os.path.join(save_dir, save_name)
+    
+    plot_weight_visualization(weights, save_path=save_path, col_idx=args.column)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="手工实现 MLP 权重可视化脚本")
@@ -111,6 +133,9 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', type=str, required=True, help='训练好的 .pkl 权重文件路径')
     parser.add_argument('--save_dir', type=str, default='', help='可视化结果保存目录')
     
+    # 新增参数：指定可视化的某一列
+    parser.add_argument('--column', type=int, default=None, help='指定可视化权重的某一列 (Neuron Index)')
+
     # 备选参数 (如果没有 meta 文件时起作用)
     parser.add_argument('--hidden1', type=int, default=256)
     parser.add_argument('--hidden2', type=int, default=128)
