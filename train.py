@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import argparse
+import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 
@@ -17,6 +18,7 @@ from core.scheduler import ConstantLR, StepLR, LinearLR, CosineAnnealingLR
 from evaluate import evaluate 
 
 def train(args):
+    np.random.seed(args.seed)
     print("="*60)
     print(f"实验配置:")
     print(f"学习率: {args.lr} | 权重衰减: {args.weight_decay} | 调度器: {args.scheduler}")
@@ -277,6 +279,8 @@ if __name__ == '__main__':
     # 日志与保存控制
     parser.add_argument('--no_save_history', action='store_true', default=False, 
                         help='不保存训练历史记录 (history.json 及相关元数据)')
+    
+    parser.add_argument('--seed', type=int, default=42, help='全局随机种子，确保数据集切分一致')
     
     args = parser.parse_args()
     train(args)
