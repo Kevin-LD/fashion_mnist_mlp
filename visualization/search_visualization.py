@@ -101,7 +101,7 @@ def plot_correlation_heatmap(df, save_dir):
     corr = numeric_df.corr()
     
     sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f", vmin=-1, vmax=1)
-    plt.title("Correlation Heatmap (Parameters vs Validation Accuracy)")
+    plt.title("Correlation Heatmap")
     plt.tight_layout()
     
     save_path = os.path.join(save_dir, 'correlation_heatmap.png')
