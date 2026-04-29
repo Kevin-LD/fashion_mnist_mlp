@@ -1,11 +1,11 @@
 # Fashion-MNIST MLP
 本项目基于三层多层感知机（MLP）对 Fashion-MNIST 数据集进行分类，所有组件均手动实现，不依赖 PyTorch 等深度学习框架。
 ## 环境依赖
-请使用 Python 3.12 运行。安装所需依赖：
-`pip install -r requirements.txt`
-主要依赖为 numpy 等科学计算与下载工具库，详见 `requirements.txt`。
+请使用 Python 3.12 运行。安装所需依赖：  
+`pip install -r requirements.txt`  
+主要依赖为 numpy 等科学计算与下载工具库，详见 `requirements.txt`。  
 ## 数据集
-Fashion-MNIST 数据集将由脚本自动下载至 `--data_path` 指定的目录（默认为 `./data`），无需手动准备。
+Fashion-MNIST 数据集将由脚本自动下载至 `./data`，无需手动准备。
 ## 训练
 运行 `train.py` 开始训练，基本命令：
 `python train.py`
@@ -40,7 +40,7 @@ Fashion-MNIST 数据集将由脚本自动下载至 `--data_path` 指定的目录
 - `--hidden1`、`--hidden2`、`--activation`：当权重文件目录下不包含模型结构元数据时，需要通过这些参数显式指定网络结构，务必与训练时的设置一致（默认值分别为256、128、`relu`）；若权重文件目录下已保存结构信息，则无需指定。
 查看完整说明：`python evaluate.py --help`
 ## 完整示例
-（1）训练：两个隐藏层大小分别为512和256，使用ReLU，训练40个epoch，结果保存在 `./exp1`：
+（1）训练：两个隐藏层大小分别为512和256，使用ReLU，训练40个epoch，结果保存在 `./exp1`：  
 `python train.py --hidden1 512 --hidden2 256 --activation "relu" --epochs 40 --save_dir "./exp1"`  
-（2）评估：
+（2）评估：  
 `python evaluate.py --model_path "./exp1/best_model.pkl"`
