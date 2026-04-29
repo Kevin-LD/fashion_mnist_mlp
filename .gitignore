@@ -10,8 +10,14 @@ data/
 # Weights & Training histroy
 runs/
 
-# report
-report/
+# Latex 编译文件
+report/*.aux
+report/*.log
+report/*.toc
+report/*.out
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
 
-# figures
-figures/
+# report
+report/*.pdf
