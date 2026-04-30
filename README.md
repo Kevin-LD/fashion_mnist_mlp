@@ -33,7 +33,7 @@ python evaluate.py --model_path "runs\exp_2_epoch_200\best_model.pkl"
 使用 viasualization 目录下的脚本对训练结果进行可视化。
 示例：
 ```bash
-python visualization\\confusion_matrix_visualization.py --model_path "runs\exp_2_epoch_200\best_model.pkl"                                                                     
+python visualization\confusion_matrix_visualization.py --model_path "runs\exp_2_epoch_200\best_model.pkl"                                                                     
 ```
 训练、测试与可视化脚本的详细参数说明可通过以下命令查看：
 ```bash
