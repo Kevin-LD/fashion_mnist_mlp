@@ -8,7 +8,7 @@
 首次运行训练脚本时，程序会自动下载并准备 Fashion-MNIST 数据集，无需手动下载。数据默认保存在 `./data` 目录下。  
 ## 运行方式  
 ### 训练  
-使用 train.py 进行模型训练，支持学习率调度、Dropout 与断点续训等功能。 
+使用 train.py 进行模型训练，支持学习率调度、Dropout 与断点续训等功能。
 示例：
 ```bash
 python train.py --hidden1 512 --hidden2 128 --weight_decay 1e-4 --batch_size 32 --lr 2e-2 --scheduler "cosine" --epochs 200 --dropout_p 0.2 --save_dir "runs/exp_2_epoch_200"         
