@@ -23,7 +23,7 @@ python train.py --hidden1 512 --hidden2 128 --weight_decay 1e-4 --batch_size 32 
 - `--dropout_p`：Dropout 概率  
 - `--save_dir`：模型权重与训练日志保存目录  
 ### 测试  
-使用 `evaluate.py` 对训练好的模型进行评估。  
+使用 `evaluate.py` 对训练好的模型进行评估。
 示例：  
 ```bash
 python evaluate.py --model_path "runs\exp_2_epoch_200\best_model.pkl"
