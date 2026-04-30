@@ -39,6 +39,6 @@ python visualization\\confusion_matrix_visualization.py --model_path "runs\exp_2
 ```bash
 python script_name.py --help
 ```
-## 模型权重
-模型权重下载地址： 
-https://drive.google.com/file/d/1oR0kwrEkUiJceKnIKqiBwuYCAAms9fPR/view?usp=sharing  
+## 模型权重  
+训练完成后的模型权重可通过以下链接下载：  
+https://drive.google.com/file/d/1oR0kwrEkUiJceKnIKqiBwuYCAAms9fPR/view?usp=sharing
